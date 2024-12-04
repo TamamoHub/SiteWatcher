@@ -37,7 +37,7 @@
 
 ### Використання готового релізу
 
-1. Завантажте останній реліз з [сторінки релізів](https://github.com/tamamohub/SiteMonitor/releases)
+1. Завантажте останній реліз з [сторінки релізів](https://github.com/tamamohub/SiteWatcher/releases)
 2. Розпакуйте архів
 3. Запустіть `SiteMonitor.exe`
 
