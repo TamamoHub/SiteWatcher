@@ -15,8 +15,6 @@
 [📖 Документація](#-документація) •
 [📝 Ліцензія](#-ліцензія)
 
-<img src="docs/images/preview.png" alt="SiteMonitor Preview" width="800"/>
-
 </div>
 
 ## 🚀 Можливості
@@ -39,7 +37,7 @@
 
 ### Використання готового релізу
 
-1. Завантажте останній реліз з [сторінки релізів](https://github.com/yourusername/SiteMonitor/releases)
+1. Завантажте останній реліз з [сторінки релізів](https://github.com/tamamohub/SiteMonitor/releases)
 2. Розпакуйте архів
 3. Запустіть `SiteMonitor.exe`
 
@@ -47,7 +45,7 @@
 
 ```bash
 # Клонуємо репозиторій
-git clone https://github.com/yourusername/SiteMonitor.git
+git clone https://github.com/tamamohub/SiteMonitor.git
 cd SiteMonitor
 
 # Створюємо віртуальне середовище
