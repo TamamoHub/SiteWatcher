@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Сайт Монітор</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-primary: #1f1f1f;
+            --bg-secondary: rgba(32, 32, 32, 0.8);
+            --bg-input: #374151;
+            --bg-card: rgba(32, 32, 32, 0.8);
+            --text-primary: #e5e7eb;
+            --text-secondary: #9ca3af;
+            --border-color: rgba(75, 85, 99, 0.5);
+        }
+
+        [data-theme="light"] {
+            --bg-primary: #f3f4f6;
+            --bg-secondary: rgba(255, 255, 255, 0.9);
+            --bg-input: #ffffff;
+            --bg-card: rgba(255, 255, 255, 0.9);
+            --text-primary: #111827;
+            --text-secondary: #4b5563;
+            --border-color: rgba(209, 213, 219, 0.5);
+        }
+
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        
+        .mica-effect {
+            background: var(--bg-secondary);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 200px;
+            width: 100%;
+            background: var(--bg-card);
+            border-radius: 0.5rem;
+            padding: 1rem;
+        }
+
+        input, select {
+            background-color: var(--bg-input) !important;
+            color: var(--text-primary) !important;
+            border-color: var(--border-color) !important;
+        }
+
+        input::placeholder {
+            color: var(--text-secondary) !important;
+        }
+
+        .site-group {
+            background-color: var(--bg-input) !important;
+            color: var(--text-secondary) !important;
+        }
+
+        .stats-card {
+            background-color: var(--bg-input) !important;
+        }
+
+        /* Стилі для скролбару */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--text-secondary);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-primary);
+        }
+
+        /* Стилі для графіків у світлій темі */
+        [data-theme="light"] .chart-container {
+            border: 1px solid var(--border-color);
+        }
+
+        /* Стилі для кнопок */
+        .btn-primary {
+            background-color: #2563eb !important;
+            color: white !important;
+        }
+
+        .btn-primary:hover {
+            background-color: #1d4ed8 !important;
+        }
+
+        .btn-secondary {
+            background-color: var(--bg-input) !important;
+            color: var(--text-primary) !important;
+            border: 1px solid var(--border-color) !important;
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--bg-secondary) !important;
+        }
+
+        /* Стилі для статус бейджів */
+        .status-badge.status-up {
+            background-color: #dcfce7 !important;
+            color: #166534 !important;
+        }
+
+        .status-badge.status-down {
+            background-color: #fee2e2 !important;
+            color: #991b1b !important;
+        }
+
+        /* Стилі для спливаючих меню */
+        .dropdown-menu {
+            background-color: var(--bg-secondary) !important;
+            border: 1px solid var(--border-color) !important;
+        }
+
+        .dropdown-item {
+            color: var(--text-primary) !important;
+        }
+
+        .dropdown-item:hover {
+            background-color: var(--bg-input) !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mx-auto px-4 py-8">
+        <header class="mica-effect rounded-lg p-6 mb-8">
+            <div class="flex justify-between items-center">
+                <h1 class="text-3xl font-bold">Моніторинг сайтів</h1>
+                <div class="flex gap-4">
+                    <button id="themeToggle" class="btn-secondary p-2 rounded-lg">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                  d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                        </svg>
+                    </button>
+                    <button id="exportConfig" class="btn-primary p-2 rounded-lg">
+                        Експорт
+                    </button>
+                    <button id="importConfig" class="btn-primary p-2 rounded-lg">
+                        Імпорт
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="mica-effect rounded-lg p-6 mb-8">
+            <form id="addSiteForm" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div>
+                    <label class="block text-sm font-medium mb-1">URL сайту</label>
+                    <input type="url" id="siteUrl" required
+                           class="w-full px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500"
+                           placeholder="https://example.com">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Назва</label>
+                    <input type="text" id="siteName"
+                           class="w-full px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500"
+                           placeholder="Мій сайт">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Група</label>
+                    <input type="text" id="siteGroup"
+                           class="w-full px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500"
+                           placeholder="Основні сайти">
+                </div>
+                <div class="md:col-span-3">
+                    <button type="submit"
+                            class="btn-primary w-full px-6 py-2 rounded-lg transition-colors">
+                        Додати сайт
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="mica-effect rounded-lg p-6">
+                <h2 class="text-xl font-semibold mb-4">Статистика</h2>
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="stats-card rounded-lg p-4">
+                        <h3 class="text-sm text-secondary">Всього сайтів</h3>
+                        <p id="totalSites" class="text-2xl font-bold">0</p>
+                    </div>
+                    <div class="stats-card rounded-lg p-4">
+                        <h3 class="text-sm text-secondary">Активні сайти</h3>
+                        <p id="activeSites" class="text-2xl font-bold">0</p>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+
+            <div class="mica-effect rounded-lg p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold">Сайти</h2>
+                    <div class="flex gap-2">
+                        <select id="groupFilter" class="btn-secondary px-3 py-1 rounded-lg">
+                            <option value="">Всі групи</option>
+                        </select>
+                        <select id="sortBy" class="btn-secondary px-3 py-1 rounded-lg">
+                            <option value="name">За назвою</option>
+                            <option value="status">За статусом</option>
+                            <option value="lastCheck">За часом перевірки</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="sitesList" class="space-y-4 max-h-[600px] overflow-y-auto">
+                    <!-- Сайти будуть додані тут -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <template id="siteTemplate">
+        <div class="site-item mica-effect rounded-lg p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h3 class="text-lg font-semibold site-name"></h3>
+                        <span class="text-sm site-group px-2 py-1 rounded"></span>
+                    </div>
+                    <p class="text-sm text-secondary site-url"></p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span class="status-badge px-3 py-1 rounded-full text-sm font-medium"></span>
+                    <button class="toggle-btn btn-secondary px-4 py-2 rounded-lg text-sm font-medium"></button>
+                    <button class="delete-btn text-red-400 hover:text-red-300">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="chart-container" style="height: 100px;">
+                    <canvas class="site-history-chart"></canvas>
+                </div>
+            </div>
+            <div class="mt-4 grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Звук при відновленні</label>
+                    <div class="flex gap-2">
+                        <select class="up-sound-select btn-secondary flex-1 px-4 py-2 rounded-lg">
+                            <option value="SystemAsterisk">Звук 1</option>
+                            <option value="SystemExclamation">Звук 2</option>
+                            <option value="SystemHand">Звук 3</option>
+                            <option value="SystemQuestion">Звук 4</option>
+                            <option value="SystemDefault">Звук 5</option>
+                        </select>
+                        <button class="play-up-sound btn-secondary px-3 py-2 rounded-lg">▶</button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Звук при втраті доступу</label>
+                    <div class="flex gap-2">
+                        <select class="down-sound-select btn-secondary flex-1 px-4 py-2 rounded-lg">
+                            <option value="SystemHand">Звук 3</option>
+                            <option value="SystemAsterisk">Звук 1</option>
+                            <option value="SystemExclamation">Звук 2</option>
+                            <option value="SystemQuestion">Звук 4</option>
+                            <option value="SystemDefault">Звук 5</option>
+                        </select>
+                        <button class="play-down-sound btn-secondary px-3 py-2 rounded-lg">▶</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <script>
+        // Ініціалізація графіка загальної статистики
+        const ctx = document.getElementById('statusChart').getContext('2d');
+        const statusChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Працюючі сайти',
+                    data: [],
+                    borderColor: 'rgb(34, 197, 94)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+
+        // Функція для оновлення графіка
+        function updateStatusChart(data) {
+            const workingSites = Object.values(data).filter(site => site.status).length;
+            const time = new Date().toLocaleTimeString();
+            
+            statusChart.data.labels.push(time);
+            statusChart.data.datasets[0].data.push(workingSites);
+            
+            if (statusChart.data.labels.length > 20) {
+                statusChart.data.labels.shift();
+                statusChart.data.datasets[0].data.shift();
+            }
+            
+            statusChart.update();
+        }
+
+        // Функція для створення графіка історії сайту
+        function createSiteHistoryChart(canvas, data) {
+            return new Chart(canvas.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: data.times,
+                    datasets: [{
+                        label: 'Статус',
+                        data: data.statuses,
+                        borderColor: 'rgb(59, 130, 246)',
+                        tension: 0.1,
+                        stepped: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 1,
+                            ticks: {
+                                stepSize: 1,
+                                callback: value => value === 1 ? 'Працює' : 'Не працює'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+
+        let currentTheme = 'dark';
+        const themeToggle = document.getElementById('themeToggle');
+        
+        themeToggle.addEventListener('click', () => {
+            currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', currentTheme);
+            updateChartTheme(currentTheme);
+        });
+
+        // Оновлюємо функцію оновлення списку сайтів
+        function updateSitesList() {
+            fetch('/get_sites')
+                .then(response => response.json())
+                .then(data => {
+                    const sitesList = document.getElementById('sitesList');
+                    const groupFilter = document.getElementById('groupFilter');
+                    const sortBy = document.getElementById('sortBy');
+                    
+                    // Оновлюємо статистику
+                    document.getElementById('totalSites').textContent = Object.keys(data).length;
+                    document.getElementById('activeSites').textContent = 
+                        Object.values(data).filter(site => site.is_active).length;
+                    
+                    // Оновлюємо графік
+                    updateStatusChart(data);
+                    
+                    // Оновлюємо список груп
+                    const groups = [...new Set(Object.values(data).map(site => site.group))];
+                    const currentGroup = groupFilter.value;
+                    groupFilter.innerHTML = '<option value="">Всі групи</option>';
+                    groups.forEach(group => {
+                        if (group) {
+                            const option = document.createElement('option');
+                            option.value = group;
+                            option.textContent = group;
+                            groupFilter.appendChild(option);
+                        }
+                    });
+                    groupFilter.value = currentGroup;
+                    
+                    // Фільтруємо та сортуємо сайти
+                    let sites = Object.entries(data);
+                    if (groupFilter.value) {
+                        sites = sites.filter(([_, site]) => site.group === groupFilter.value);
+                    }
+                    
+                    switch (sortBy.value) {
+                        case 'name':
+                            sites.sort((a, b) => (a[1].name || a[0]).localeCompare(b[1].name || b[0]));
+                            break;
+                        case 'status':
+                            sites.sort((a, b) => b[1].status - a[1].status);
+                            break;
+                        case 'lastCheck':
+                            sites.sort((a, b) => b[1].last_check_time - a[1].last_check_time);
+                            break;
+                    }
+                    
+                    sitesList.innerHTML = '';
+                    sites.forEach(([url, siteData]) => {
+                        const siteElement = document.importNode(siteTemplate.content, true);
+                        const container = siteElement.querySelector('.site-item');
+                        
+                        container.querySelector('.site-name').textContent = siteData.name || url;
+                        container.querySelector('.site-url').textContent = url;
+                        container.querySelector('.site-group').textContent = siteData.group || 'Без групи';
+                        
+                        const statusBadge = container.querySelector('.status-badge');
+                        if (siteData.status) {
+                            statusBadge.textContent = 'Працює';
+                            statusBadge.classList.add('status-up');
+                        } else {
+                            statusBadge.textContent = 'Не працює';
+                            statusBadge.classList.add('status-down');
+                        }
+                        
+                        const toggleBtn = container.querySelector('.toggle-btn');
+                        if (siteData.is_active) {
+                            toggleBtn.textContent = 'Призупинити';
+                            toggleBtn.classList.add('bg-yellow-100', 'text-yellow-800');
+                        } else {
+                            toggleBtn.textContent = 'Відновити';
+                            toggleBtn.classList.add('bg-blue-100', 'text-blue-800');
+                        }
+                        
+                        // Встановлюємо збережені звуки
+                        const upSoundSelect = container.querySelector('.up-sound-select');
+                        const downSoundSelect = container.querySelector('.down-sound-select');
+                        
+                        if (siteData.up_sound) {
+                            upSoundSelect.value = siteData.up_sound;
+                        }
+                        if (siteData.down_sound) {
+                            downSoundSelect.value = siteData.down_sound;
+                        }
+                        
+                        // Додаємо обробники подій
+                        container.querySelector('.delete-btn').addEventListener('click', () => deleteSite(url));
+                        toggleBtn.addEventListener('click', () => toggleSite(url));
+                        
+                        // Обробники для звуків
+                        upSoundSelect.addEventListener('change', () => {
+                            fetch('/set_sounds', {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({
+                                    url: url,
+                                    up_sound: upSoundSelect.value
+                                })
+                            });
+                        });
+                        
+                        downSoundSelect.addEventListener('change', () => {
+                            fetch('/set_sounds', {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({
+                                    url: url,
+                                    down_sound: downSoundSelect.value
+                                })
+                            });
+                        });
+                        
+                        container.querySelector('.play-up-sound').addEventListener('click', () => {
+                            const sound = upSoundSelect.value;
+                            playSound(sound);
+                        });
+
+                        container.querySelector('.play-down-sound').addEventListener('click', () => {
+                            const sound = downSoundSelect.value;
+                            playSound(sound);
+                        });
+                        
+                        // Створюємо графік історії для сайту
+                        const canvas = container.querySelector('.site-history-chart');
+                        if (siteData.history) {
+                            createSiteHistoryChart(canvas, siteData.history);
+                        }
+                        
+                        sitesList.appendChild(siteElement);
+                    });
+                })
+                .catch(error => console.error('Error updating sites list:', error));
+        }
+
+        // Ініціалізація
+        document.addEventListener('DOMContentLoaded', () => {
+            const addSiteForm = document.getElementById('addSiteForm');
+            const groupFilter = document.getElementById('groupFilter');
+            const sortBy = document.getElementById('sortBy');
+            
+            addSiteForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const url = document.getElementById('siteUrl').value;
+                const name = document.getElementById('siteName').value;
+                const group = document.getElementById('siteGroup').value;
+                
+                try {
+                    const response = await fetch('/add_site', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ url, name, group }),
+                    });
+                    
+                    if (response.ok) {
+                        addSiteForm.reset();
+                        updateSitesList();
+                    }
+                } catch (error) {
+                    console.error('Error adding site:', error);
+                }
+            });
+            
+            [groupFilter, sortBy].forEach(el => {
+                el.addEventListener('change', updateSitesList);
+            });
+            
+            document.getElementById('exportConfig').addEventListener('click', async () => {
+                try {
+                    const response = await fetch('/export_config');
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'sites_config.json';
+                    a.click();
+                } catch (error) {
+                    console.error('Error exporting config:', error);
+                }
+            });
+            
+            document.getElementById('importConfig').addEventListener('click', () => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                input.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    const formData = new FormData();
+                    formData.append('config', file);
+                    
+                    try {
+                        const response = await fetch('/import_config', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        if (response.ok) {
+                            updateSitesList();
+                        }
+                    } catch (error) {
+                        console.error('Error importing config:', error);
+                    }
+                };
+                input.click();
+            });
+
+            updateSitesList();
+            setInterval(updateSitesList, 5000);
+        });
+
+        async function deleteSite(url) {
+            try {
+                const response = await fetch('/remove_site', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ url }),
+                });
+                
+                if (response.ok) {
+                    updateSitesList();
+                }
+            } catch (error) {
+                console.error('Error deleting site:', error);
+            }
+        }
+
+        async function toggleSite(url) {
+            try {
+                const response = await fetch('/toggle_site', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ url }),
+                });
+                
+                if (response.ok) {
+                    updateSitesList();
+                }
+            } catch (error) {
+                console.error('Error toggling site:', error);
+            }
+        }
+
+        async function playSound(sound) {
+            try {
+                await fetch('/play_sound', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ sound }),
+                });
+            } catch (error) {
+                console.error('Error playing sound:', error);
+            }
+        }
+
+        // Оновлюємо функцію оновлення списку сайтів для правильного застосування стилів статусу
+        function updateSitesList() {
+            fetch('/get_sites')
+                .then(response => response.json())
+                .then(data => {
+                    const sitesList = document.getElementById('sitesList');
+                    const groupFilter = document.getElementById('groupFilter');
+                    const sortBy = document.getElementById('sortBy');
+                    
+                    // Оновлюємо статистику
+                    document.getElementById('totalSites').textContent = Object.keys(data).length;
+                    document.getElementById('activeSites').textContent = 
+                        Object.values(data).filter(site => site.is_active).length;
+                    
+                    // Оновлюємо графік
+                    updateStatusChart(data);
+                    
+                    // Оновлюємо список груп
+                    const groups = [...new Set(Object.values(data).map(site => site.group))];
+                    const currentGroup = groupFilter.value;
+                    groupFilter.innerHTML = '<option value="">Всі групи</option>';
+                    groups.forEach(group => {
+                        if (group) {
+                            const option = document.createElement('option');
+                            option.value = group;
+                            option.textContent = group;
+                            groupFilter.appendChild(option);
+                        }
+                    });
+                    groupFilter.value = currentGroup;
+                    
+                    // Фільтруємо та сортуємо сайти
+                    let sites = Object.entries(data);
+                    if (groupFilter.value) {
+                        sites = sites.filter(([_, site]) => site.group === groupFilter.value);
+                    }
+                    
+                    switch (sortBy.value) {
+                        case 'name':
+                            sites.sort((a, b) => (a[1].name || a[0]).localeCompare(b[1].name || b[0]));
+                            break;
+                        case 'status':
+                            sites.sort((a, b) => b[1].status - a[1].status);
+                            break;
+                        case 'lastCheck':
+                            sites.sort((a, b) => b[1].last_check_time - a[1].last_check_time);
+                            break;
+                    }
+                    
+                    sitesList.innerHTML = '';
+                    sites.forEach(([url, siteData]) => {
+                        const siteElement = document.importNode(siteTemplate.content, true);
+                        const container = siteElement.querySelector('.site-item');
+                        
+                        container.querySelector('.site-name').textContent = siteData.name || url;
+                        container.querySelector('.site-url').textContent = url;
+                        container.querySelector('.site-group').textContent = siteData.group || 'Без групи';
+                        
+                        const statusBadge = container.querySelector('.status-badge');
+                        if (siteData.status) {
+                            statusBadge.textContent = 'Працює';
+                            statusBadge.classList.add('status-up');
+                        } else {
+                            statusBadge.textContent = 'Не працює';
+                            statusBadge.classList.add('status-down');
+                        }
+                        
+                        const toggleBtn = container.querySelector('.toggle-btn');
+                        if (siteData.is_active) {
+                            toggleBtn.textContent = 'Призупинити';
+                            toggleBtn.classList.add('bg-yellow-100', 'text-yellow-800');
+                        } else {
+                            toggleBtn.textContent = 'Відновити';
+                            toggleBtn.classList.add('bg-blue-100', 'text-blue-800');
+                        }
+                        
+                        // Встановлюємо збережені звуки
+                        const upSoundSelect = container.querySelector('.up-sound-select');
+                        const downSoundSelect = container.querySelector('.down-sound-select');
+                        
+                        if (siteData.up_sound) {
+                            upSoundSelect.value = siteData.up_sound;
+                        }
+                        if (siteData.down_sound) {
+                            downSoundSelect.value = siteData.down_sound;
+                        }
+                        
+                        // Додаємо обробники подій
+                        container.querySelector('.delete-btn').addEventListener('click', () => deleteSite(url));
+                        toggleBtn.addEventListener('click', () => toggleSite(url));
+                        
+                        // Обробники для звуків
+                        upSoundSelect.addEventListener('change', () => {
+                            fetch('/set_sounds', {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({
+                                    url: url,
+                                    up_sound: upSoundSelect.value
+                                })
+                            });
+                        });
+                        
+                        downSoundSelect.addEventListener('change', () => {
+                            fetch('/set_sounds', {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({
+                                    url: url,
+                                    down_sound: downSoundSelect.value
+                                })
+                            });
+                        });
+                        
+                        container.querySelector('.play-up-sound').addEventListener('click', () => {
+                            const sound = upSoundSelect.value;
+                            playSound(sound);
+                        });
+
+                        container.querySelector('.play-down-sound').addEventListener('click', () => {
+                            const sound = downSoundSelect.value;
+                            playSound(sound);
+                        });
+                        
+                        // Створюємо графік історії для сайту
+                        const canvas = container.querySelector('.site-history-chart');
+                        if (siteData.history) {
+                            createSiteHistoryChart(canvas, siteData.history);
+                        }
+                        
+                        sitesList.appendChild(siteElement);
+                    });
+                });
+        }
+
+        // Оновлюємо налаштування графіків для правильного відображення в світлій темі
+        function updateChartTheme(theme) {
+            const textColor = theme === 'light' ? '#111827' : '#e5e7eb';
+            const gridColor = theme === 'light' ? '#e5e7eb' : '#374151';
+            
+            // Оновлюємо основний графік
+            statusChart.options.scales.x.grid.color = gridColor;
+            statusChart.options.scales.y.grid.color = gridColor;
+            statusChart.options.scales.x.ticks.color = textColor;
+            statusChart.options.scales.y.ticks.color = textColor;
+            statusChart.update();
+            
+            // Оновлюємо графіки сайтів
+            document.querySelectorAll('.site-history-chart').forEach(canvas => {
+                const chart = Chart.getChart(canvas);
+                if (chart) {
+                    chart.options.scales.x.grid.color = gridColor;
+                    chart.options.scales.y.grid.color = gridColor;
+                    chart.options.scales.x.ticks.color = textColor;
+                    chart.options.scales.y.ticks.color = textColor;
+                    chart.update();
+                }
+            });
+        }
+    </script>
+</body>
+</html>
